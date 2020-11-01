@@ -226,15 +226,22 @@ def reg_username_password():
 					'password': password_entry.get()
 				}
 			)
+	elif(len(PASSWORD)>=10):
+		reg_wrong.config(text = "Users full!")
+	elif(username_entry.get()== "" and password_entry.get()== ""):
+		reg_wrong.config(text = "Invalid Entry!")
 
 	Data.commit()
 
 	Data.close()
 
+	if(username_entry.get()!= "" and password_entry.get()!= "" and len(PASSWORD)<10):
+		frame1()
+
 	username_entry.delete(0,END)
 	password_entry.delete(0,END)
 
-	frame1()
+	
 
 def program_frame():
 	text = password_entry2.get()
@@ -269,6 +276,11 @@ def mode_switch(m):
 		AMP_scale.configure(label="Atrial Amplitude", from_=0.0, to=5.0, resolution=0.05)
 		PW_scale.configure(label="Atrial Pulse Width")
 		RP_scale.configure(label="Atrial Refractory Period")
+		LRL_att.configure(text="Lower Rate Limit:")
+		URL_att.configure(text="Upper Rate Limit:")
+		AMP_att.configure(text="Atrial Amplitude:")
+		PW_att.configure(text="Atrial Pulse Width:")
+		RP_att.configure(text="Atrial Refractory Period:", font=fontStyle6)
 
 		#Load last saved values to the scales
 		for e in AOO_params:
@@ -286,10 +298,15 @@ def mode_switch(m):
 		VOO_mode.configure(relief=SUNKEN)
 		AAI_mode.configure(relief=RAISED)
 		VVI_mode.configure(relief=RAISED)
-		AMP_scale.configure(label="Ventrical Amplitude", from_=0.0, to=5.0, resolution=0.05)
-		PW_scale.configure(label="Ventrical Pulse Width")
-		RP_scale.configure(label="Ventrical Refractory Period")
-		
+		AMP_scale.configure(label="Ventricular Amplitude", from_=0.0, to=5.0, resolution=0.05)
+		PW_scale.configure(label="Ventricular Pulse Width")
+		RP_scale.configure(label="Ventricular Refractory Period")
+		LRL_att.configure(text="Lower Rate Limit:")
+		URL_att.configure(text="Upper Rate Limit:")
+		AMP_att.configure(text="Ventricular Amplitude:")
+		PW_att.configure(text="Ventricular Pulse Width:")
+		RP_att.configure(text="Ventricular Refractory Period:", font=tkFont.Font(family="Times New Roman", size=13, weight="bold"))
+
 		for e in VOO_params:
 			exec(scales[i] % VOO_params[e])
 			i=i+1
@@ -308,7 +325,12 @@ def mode_switch(m):
 		AMP_scale.configure(label="Atrial Amplitude", from_=0.0, to=7.0, resolution = 0.1 if(AMP_scale.get() >= 0.5 and AMP_scale.get() <= 3.2) else 0.5)
 		PW_scale.configure(label="Atrial Pulse Width")
 		RP_scale.configure(label="Atrial Refractory Period")
-		
+		LRL_att.configure(text="Lower Rate Limit:")
+		URL_att.configure(text="Upper Rate Limit:")
+		AMP_att.configure(text="Atrial Amplitude:")
+		PW_att.configure(text="Atrial Pulse Width:")
+		RP_att.configure(text="Atrial Refractory Period:", font=fontStyle6)
+
 		for e in AAI_params:
 			exec(scales[i] % AAI_params[e])
 			i=i+1
@@ -324,9 +346,14 @@ def mode_switch(m):
 		VOO_mode.configure(relief=RAISED)
 		AAI_mode.configure(relief=RAISED)
 		VVI_mode.configure(relief=SUNKEN)
-		AMP_scale.configure(label="Ventrical Amplitude", from_=0.0, to=7.0, resolution = 0.1 if(AMP_scale.get() >= 0.5 and AMP_scale.get() <= 3.2) else 0.5)
-		PW_scale.configure(label="Ventrical Pulse Width")
-		RP_scale.configure(label="Ventrical Refractory Period")
+		AMP_scale.configure(label="Ventricular Amplitude", from_=0.0, to=7.0, resolution = 0.1 if(AMP_scale.get() >= 0.5 and AMP_scale.get() <= 3.2) else 0.5)
+		PW_scale.configure(label="Ventricular Pulse Width")
+		RP_scale.configure(label="Ventricular Refractory Period")
+		LRL_att.configure(text="Lower Rate Limit:")
+		URL_att.configure(text="Upper Rate Limit:")
+		AMP_att.configure(text="Ventricular Amplitude:")
+		PW_att.configure(text="Ventricular Pulse Width:")
+		RP_att.configure(text="Ventricular Refractory Period:", font=tkFont.Font(family="Times New Roman", size=13, weight="bold"))
 		
 		for e in VVI_params:
 			exec(scales[i] % VVI_params[e])
@@ -382,6 +409,8 @@ def save():
 #change_XXX_res functions account for the different resolutions in different ranges for each scale
 def change_LRL_res(r):
 	LRL_scale.configure(resolution = 1 if(float(LRL_scale.get()) >= 49.5 and float(LRL_scale.get()) <= 90) else 5)
+	if LRL_scale.get() > URL_scale.get():
+		URL_scale.set(LRL_scale.get())
 
 def change_AMP_res(r):
 	if mode == "AAI" or mode == "VVI":
@@ -403,6 +432,10 @@ def change_PW_res(r):
 	PW_scale.configure(resolution = 0.05 if(PW_scale.get() <= 0.1) else 0.1)
 	if PW_scale.get() == 0:
 		PW_scale.set(0.05)
+
+def change_URL_lim(l):
+	if LRL_scale.get() > URL_scale.get():
+		LRL_scale.set(URL_scale.get())
 
 
 #USED TO SHOW ALL THE PARAMETER !! BEST TO KEEP THIS FUNCTION AT THE END OF ALL FUNCTIONS
@@ -510,6 +543,7 @@ username_label=tk.Label(canvas_reg, text = "Username: ", font = fontStyle3, bg =
 username_entry=tk.Entry(canvas_reg,font= fontStyle2)
 password_label=tk.Label(canvas_reg, text = "Password: ", font = fontStyle3, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000")
 password_entry=tk.Entry(canvas_reg,font= fontStyle2)
+reg_wrong =tk.Label(canvas_reg,text ="", font = fontStyle2 ,bg = CANVAS_BACKGROUND_COLOR)
 
 
 submit_button.place(relx = 0.8, rely = 0.9)
@@ -518,6 +552,7 @@ username_label.place(relx = 0.25, rely = 0.38)
 username_entry.place(relx = 0.45,rely = 0.4, relwidth = 0.3)
 password_label.place(relx = 0.25, rely = 0.48)
 password_entry.place(relx = 0.45,rely = 0.5, relwidth = 0.3)
+reg_wrong.place(relx=0.4,rely=0.55)
 
 
 #Log in Canvas
@@ -560,7 +595,7 @@ VVI_mode.place(rely=0.0475, relx = 0.749)
 
 #Sliders to change the parameter values
 LRL_scale =Scale(canvas_interface, orient=HORIZONTAL, length=600, width=35, sliderlength="60", label="Lower Rate Limit", font = fontStyle4, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=30, to=175, resolution=1, command=change_LRL_res)
-URL_scale =Scale(canvas_interface, orient=HORIZONTAL, length=600, width=35, sliderlength="60", label="Upper Rate Limit", font = fontStyle4, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=30, to=175, resolution=5)
+URL_scale =Scale(canvas_interface, orient=HORIZONTAL, length=600, width=35, sliderlength="60", label="Upper Rate Limit", font = fontStyle4, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=30, to=175, resolution=5, command=change_URL_lim)
 AMP_scale =Scale(canvas_interface, orient=HORIZONTAL, length=600, width=35, sliderlength="60", label="Atrial Amplitude", font = fontStyle4, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0.0, to=5.0, resolution=0.05, command=change_AMP_res)
 PW_scale = Scale(canvas_interface, orient=HORIZONTAL, length=600, width=35, sliderlength="60", label="Atrial Pulse Width", font = fontStyle4, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=1.9, resolution=0.05,  command=change_PW_res)
 RP_scale = Scale(canvas_interface, orient=HORIZONTAL, length=600, width=35, sliderlength="60", label="Atrial Refractory Period", font = fontStyle4, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=150, to=500, resolution = 10)
