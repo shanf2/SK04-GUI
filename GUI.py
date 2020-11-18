@@ -3,6 +3,7 @@ import tkinter as tk
 from PIL import Image, ImageTk, ImageOps 
 import tkinter.font as tkFont
 import sqlite3
+import serial
 
 mode = "AOO"	#Initialization mode: no pacing
 HEIGHT = 600    #dimension of the starting window
@@ -55,6 +56,34 @@ uvar = StringVar()
 avar = StringVar()
 pvar = StringVar()
 rvar = StringVar()
+
+#serial global variable
+ser=0
+
+#Function to open the Serial Port
+def init_serial():
+    global ser 
+    ser = serial.Serial()
+    ser.baudrate = 115200
+    ser.port = 'COM3'
+
+    #Specify the TimeOut in seconds, so that SerialPort Doesn't hangs
+    ser.timeout = 1
+    ser.open()          #Opens SerialPort
+
+
+#Call the Serial Initilization Function, Main Program Starts from here
+def send_data(data):
+    global ser
+    init_serial()
+    ser.write(data)
+    ser.close()
+
+def read_data():
+    global ser
+    init_serial()
+    bytes = ser.readline() #Read from Serial Port
+    ser.close()
 
 #Background image
 class Background(Frame):
