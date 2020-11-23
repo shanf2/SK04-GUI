@@ -1,9 +1,13 @@
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure    #to use matplotlib install matplotlib,to install: go to cmd and type :python -m pip install -U matplotlib then python -m pip install -U pip
 from tkinter import *
 import tkinter as tk
 from PIL import Image, ImageTk, ImageOps 
 import tkinter.font as tkFont
 import sqlite3
-import serial
+import numpy as np
+import serial as sr
+import time
 
 mode = "AOO"	#Initialization mode: no pacing
 HEIGHT = 600    #dimension of the starting window
@@ -11,6 +15,9 @@ WIDTH = 1000    #dimension of the starting window
 USER_ON = None        #Indicate which user is logged in
 CANVAS_BACKGROUND_COLOR = "#80aaff"
 
+#Variables used in egram
+VENT_SIGNAL = np.array([]) #ventrical signal
+ART_SIGNAL = np.array([])  #artiary signal
 
 root =tk.Tk()
 root.title('Heart Pacemaker')
@@ -56,20 +63,7 @@ uvar = StringVar()
 avar = StringVar()
 pvar = StringVar()
 rvar = StringVar()
-
-#serial global variable
-ser=0
-
-#Function to open the Serial Port
-def init_serial():
-    global ser 
-    ser = serial.Serial()
-    ser.baudrate = 115200
-    ser.port = 'COM3'
-
-    #Specify the TimeOut in seconds, so that SerialPort Doesn't hangs
-    ser.timeout = 1
-    ser.open()          #Opens SerialPort
+  
 
 
 #Call the Serial Initilization Function, Main Program Starts from here
@@ -677,5 +671,15 @@ RP_val.place(relx=0.75, rely=0.7)
 set_butt = Button(att, text = "Accept Values", padx=106.25, font = fontStyle3, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command=save)
 
 set_butt.place(rely=0.8775)
+
+try:
+	ser = sr.Serial('COM6', baudrate = 115200, timeout = 1)
+	# ser.open()  
+	if ser.isOpen():
+		connected.configure(fill = 'green')
+		connected_label.configure(text = 'Connected')
+except sr.serialutil.SerialException:
+	print('No Device Detected')
+
 
 root.mainloop() 
