@@ -263,22 +263,30 @@ def reg_username_password():
 
 	username_entry.delete(0,END)
 	password_entry.delete(0,END)
-
 	
 
 def program_frame():
+	global connected
 	text = password_entry2.get()
 	password_entry2.delete(0,END) 					#Clear the entry
 	if(text == PASSWORD[USER_ON]):					#Check if the password entered is correct
 		canvas_interface.place(x = 50, y = 25)
 		Diff_Pacemaker.place(rely = 0.008, relx = 0.45)		#Display if a new pacemaker is connected
-		Diff_Pacemaker.after(2500,lambda: Diff_Pacemaker.config(text = "disappear"))
+		Diff_Pacemaker.after(2500,lambda: Diff_Pacemaker.config(text = ""))
 		canvas_log.place_forget()
 	else:
 		pass_wrong = tk.Label(canvas_log, text = "Wrong Password, please try again!", font = fontStyle2 ,bg = CANVAS_BACKGROUND_COLOR)
 		pass_wrong.place(relx = 0.26,rely = 0.55)
 		#print(USERNAME)
 		#print(PASSWORD)
+	try:
+		ser = sr.Serial('COM6', baudrate = 115200, timeout = 1)
+		if ser.isOpen():
+			canvas_interface.delete(connected)
+			connected = canvas_interface.create_oval(10,10,20,20,fill = "green")
+			connected_label.configure(text = 'Connected')
+	except sr.serialutil.SerialException:
+		print('No Device Detected')
 
 #Configure sliders for the different pacing modes. Labels are changed and values are reset to last saved.
 def mode_switch(m):
@@ -460,6 +468,15 @@ def change_URL_lim(l):
 	if LRL_scale.get() > URL_scale.get():
 		LRL_scale.set(URL_scale.get())
 
+def egram():
+	print("hi")
+	new_window = tk.Toplevel(root)
+	new_window.title("Egram Graph")
+	new_window.geometry("700x500")
+	text = tk.Label(new_window,text = "New window")
+	text.place(relx=0.5,rely = 0.5)
+
+
 
 #USED TO SHOW ALL THE PARAMETER !! BEST TO KEEP THIS FUNCTION AT THE END OF ALL FUNCTIONS
 def show():
@@ -605,6 +622,11 @@ Diff_Pacemaker = tk.Label(canvas_interface, text = "A New Pacemaker detected", f
 
 connected_label.place(rely = 0.008, relx = 0.025)
 
+#Egram window button
+EGRAM_WINDOW = tk.Button(canvas_interface, text = "EGRAM", font = tkFont.Font(size=6), bg = CANVAS_BACKGROUND_COLOR, fg = "#990000",command = egram)
+
+EGRAM_WINDOW.place(rely = 0.008, relx = 0.95)
+
 #Mode switching buttons
 AOO_mode = tk.Button(canvas_interface, text = "AOO", width=12, pady=6, font = fontStyle1, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", relief=SUNKEN, command = lambda: mode_switch("AOO"))
 VOO_mode = tk.Button(canvas_interface, text = "VOO", width=12, pady=6, font = fontStyle1, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("VOO"))
@@ -672,14 +694,6 @@ set_butt = Button(att, text = "Accept Values", padx=106.25, font = fontStyle3, b
 
 set_butt.place(rely=0.8775)
 
-try:
-	ser = sr.Serial('COM6', baudrate = 115200, timeout = 1)
-	# ser.open()  
-	if ser.isOpen():
-		connected.configure(fill = 'green')
-		connected_label.configure(text = 'Connected')
-except sr.serialutil.SerialException:
-	print('No Device Detected')
 
 
 root.mainloop() 
