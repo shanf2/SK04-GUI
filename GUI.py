@@ -285,7 +285,7 @@ def program_frame():
 		ser = sr.Serial('COM6', baudrate = 115200, timeout = 1)
 		if ser.isOpen():
 			header.delete(connected)
-			connected = header.create_oval(10,10,20,20,fill = "green")
+			connected = header.create_oval(100,5,110,15,fill = "green")
 			connected_label.configure(text = 'Connected')
 	except sr.serialutil.SerialException:
 		print('No Device Detected')
