@@ -4,10 +4,11 @@ from tkinter import *
 import tkinter as tk
 from PIL import Image, ImageTk, ImageOps 
 import tkinter.font as tkFont
-import sqlite3
 import numpy as np
 import serial as sr
 import time
+import parameters as P
+import db_utilities as db
 
 mode = "AOO"	#Initialization mode: no pacing
 HEIGHT = 600    #dimension of the starting window
@@ -136,12 +137,8 @@ PASSWORD = []
 OID = [None]*10
 
 
-Data = sqlite3.connect('Users.db')
-c = Data.cursor()#data cursor
-
-#fetch all of the data in database
-c.execute("SELECT *, oid FROM address")
-records = c.fetchall()
+Data = db.conn('Users.db')
+records = db.fetch_users(Data)
 
 num = len(records)
 
@@ -157,9 +154,7 @@ for x in range(10-num):
 	USERNAME.append("---")
 	OID.append("")
 
-Data.commit()
 
-Data.close()
 global canvas_front
 
 #Startup Screen
@@ -171,13 +166,9 @@ def frame1():
 	Pacemaker_sign.place_forget()
 
 
-	Data = sqlite3.connect('Users.db')
+	Data = db.conn('Users.db')
+	records = db.fetch_users(Data)
 
-	c = Data.cursor()#data cursor
-
-	#fetch all of the data in database
-	c.execute("SELECT *, oid FROM address")
-	records = c.fetchall()
 	num = len(records)
 
 	USERNAME.clear()
@@ -204,10 +195,6 @@ def frame1():
 	User9.configure(text = "User: " + USERNAME[8])
 	User10.configure(text = "User: " + USERNAME[9])
 
-	Data.commit()
-
-	Data.close()
-
 
 #Login screen
 def log(user_number):
@@ -222,16 +209,8 @@ def log(user_number):
 
 #Delete a record from database
 def delete_user(user_num):
-	Data = sqlite3.connect('Users.db')
-
-	c = Data.cursor()
-
-	if(OID[user_num] != ""):
-		c.execute("DELETE from address WHERE oid ="+ OID[user_num])
-
-	Data.commit()
-
-	Data.close()
+	Data = db.conn('Users.db')
+	db.delete(Data, OID[user_num])
 	frame1()
 
 def Reg():
@@ -239,29 +218,17 @@ def Reg():
 	canvas_reg.place(x = 350, y = 50)
 
 def reg_username_password():
-	Data = sqlite3.connect('Users.db')
-
-	c = Data.cursor()#data cursor
+	Data = db.conn('Users.db')
 
 	#write into the data base
 	if(username_entry.get()!= "" and password_entry.get()!= "" and len(PASSWORD)<10):
-		c.execute("INSERT INTO address VALUES (:username, :password)",
-				{
-					'username': username_entry.get(),
-					'password': password_entry.get()
-				}
-			)
+		db.register(Data, username_entry.get(), password_entry.get())
+		frame1()
 	elif(len(PASSWORD)>=10):
 		reg_wrong.config(text = "Users full!")
 	elif(username_entry.get()== "" and password_entry.get()== ""):
 		reg_wrong.config(text = "Invalid Entry!")
 
-	Data.commit()
-
-	Data.close()
-
-	if(username_entry.get()!= "" and password_entry.get()!= "" and len(PASSWORD)<10):
-		frame1()
 
 	username_entry.delete(0,END)
 	password_entry.delete(0,END)
@@ -293,7 +260,7 @@ def program_frame():
 #Configure sliders for the different pacing modes. Labels are changed and values are reset to last saved.
 def mode_switch(m):
 	global mode
-	scales = ["LRL_scale.set(%d)", "URL_scale.set(%d)", "a_amp_scale.set(%f)", "pw_scale.set(%f)", "rp_scale.set(%d)"]
+	scales = ["lrl_scale.set(%d)", "url_scale.set(%d)", "a_amp_scale.set(%f)", "pw_scale.set(%f)", "rp_scale.set(%d)"]
 	i = 0
 	
 	if m == "AOO":
@@ -402,7 +369,7 @@ RP_att.configure(text="Ventricular Refractory Period:", font=tkFont.Font(family=
 #Save current scale values to mode-specified parameters
 def save():
 	global AOO_params, VOO_params, AAI_params, VVI_params
-	scales = ["LRL_scale.get()", "URL_scale.get()", "a_amp_scale.get()", "pw_scale.get()", "rp_scale.get()"]
+	scales = ["lrl_scale.get()", "url_scale.get()", "a_amp_scale.get()", "pw_scale.get()", "rp_scale.get()"]
 	i = 0
 	if mode == "AOO":
 		for e in AOO_params:
@@ -440,12 +407,18 @@ def save():
 		avar.set(str(VVI_params["AMP"]))
 		pvar.set(str(VVI_params["PW"]))
 		rvar.set(str(VVI_params["RP"]))
+
+def change_LRL_res(r):
+	lrl_scale.configure(resolution = 1 if(lrl_scale.get() > 49 and lrl_scale.get() < 91) else 5)
+	if lrl_scale.get() > url_scale.get():
+		url_scale.set(lrl_scale.get())
+
+def change_URL_lim(l):
+	if lrl_scale.get() > url_scale.get():
+		lrl_scale.set(url_scale.get())
+
 '''
 #change_XXX_res functions account for the different resolutions in different ranges for each scale
-def change_LRL_res(r):
-	LRL_scale.configure(resolution = 1 if(float(LRL_scale.get()) >= 49.5 and float(LRL_scale.get()) <= 90) else 5)
-	if LRL_scale.get() > URL_scale.get():
-		URL_scale.set(LRL_scale.get())
 
 def change_AMP_res(r):
 	if mode == "AAI" or mode == "VVI":
@@ -468,9 +441,6 @@ def change_PW_res(r):
 	if pw_scale.get() == 0:
 		pw_scale.set(0.05)
 
-def change_URL_lim(l):
-	if LRL_scale.get() > URL_scale.get():
-		LRL_scale.set(URL_scale.get())
 '''
 def egram():
 	print("hi")
@@ -496,23 +466,6 @@ def show():
 	print("VVI parameters: ")
 	print("\tLRL: " + str(VVI_params["LRL"]) + "\t\tURL: " + str(VVI_params["URL"]) + "\tAMP: " + str(VVI_params["AMP"]) + "\tPW: " + str(VVI_params["PW"]) + "\tRP: " + str(VVI_params["RP"]))
 
-# Databases
-# Create a username database
-'''
-Data = sqlite3.connect('Users.db')
-
-c = Data.cursor()#data cursor
-
-#create database for the first time commented after
-c.execute("""CREATE TABLE address(
-		username text,
-		password text)
-	""")
-
-Data.commit()
-
-Data.close()
-'''
 
 #Starting Page:
 Pacemaker_sign=tk.Label(root, text = "Pacemaker Interface", font = fontStyle1, bg = "#3333ff", fg = "#ffff80")
@@ -676,20 +629,20 @@ for i in range(11):
 	else: canvas_interface.grid_rowconfigure(i, weight=2)
 
 #Sliders to change the parameter values
-lrl_scale =			Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Lower Rate Limit", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=30, to=175, resolution=1)
-url_scale =			Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Upper Rate Limit", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=50, to=175, resolution=5)
-a_amp_scale =		Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Atrial Amplitude", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
-v_amp_scale =		Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Ventricular Amplitude", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
-pw_scale =			Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Pulse Width", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=30, resolution=1)
-a_sensi_scale =		Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Atrial Sensitivity", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
-v_sensi_scale =		Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Ventricular Sensitivity", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
-rp_scale =			Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="A/V Refractory Period", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=150, to=500, resolution=10)
-av_delay_scale =	Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="A/V Delay", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=70, to=300, resolution=10)
-msr_scale =			Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Maximum Sensor Rate", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=50, to=175, resolution=5)
-act_thresh_scale =	Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Activity Threshold", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=7, resolution=1)
-react_t_scale =		Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Reaction Time", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=10, to=50, resolution=10)
-res_fact_scale =	Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Response Factor", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=16, resolution=1)
-rec_t_scale =		Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Recovery Time", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=120, to=960, resolution=60)
+lrl_scale =		  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Lower Rate Limit", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=30, to=175, resolution=1)
+url_scale =		  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Upper Rate Limit", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=50, to=175, resolution=5)
+a_amp_scale =	  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Atrial Amplitude", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
+v_amp_scale =	  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Ventricular Amplitude", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
+pw_scale =		  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Pulse Width", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=30, resolution=1)
+a_sensi_scale =	  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Atrial Sensitivity", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
+v_sensi_scale =	  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Ventricular Sensitivity", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
+rp_scale =		  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="A/V Refractory Period", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=150, to=500, resolution=10)
+av_delay_scale =  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="A/V Delay", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=70, to=300, resolution=10)
+msr_scale =		  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Maximum Sensor Rate", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=50, to=175, resolution=5)
+act_thresh_scale =Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Activity Threshold", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=7, resolution=1)
+react_t_scale =	  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Reaction Time", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=10, to=50, resolution=10)
+res_fact_scale =  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Response Factor", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=16, resolution=1)
+rec_t_scale =	  Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Recovery Time", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=120, to=960, resolution=60)
 
 lrl_scale.grid(row=3, column=1, columnspan=2, sticky="NSEW")
 url_scale.grid(row=4, column=1, columnspan=2, sticky="NSEW")
