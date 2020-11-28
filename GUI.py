@@ -25,13 +25,25 @@ root.title('Heart Pacemaker')
 root.geometry("1100x600")
 
 params = P.Parameters()
+nominal = params.save(None)
 
 #Variables to hold the value of the current sliders to use for displaying the values.
-lvar = StringVar()
-uvar = StringVar()
-avar = StringVar()
-pvar = StringVar()
-rvar = StringVar()
+lrlvar = StringVar()
+urlvar = StringVar()
+aampvar = StringVar()
+vampvar = StringVar()
+pwvar = StringVar()
+asensivar = StringVar()
+vsensivar = StringVar()
+rpvar = StringVar()
+avdelayvar = StringVar()
+actthreshvar = StringVar()
+reacttvar = StringVar()
+resfactvar = StringVar()
+rectvar = StringVar()
+msrvar = StringVar()
+varlist=[ lrlvar, urlvar, aampvar, vampvar, pwvar, asensivar, vsensivar, rpvar\
+	    , avdelayvar, actthreshvar, reacttvar, resfactvar, rectvar, msrvar ]
   
 ser=sr.Serial()
 
@@ -94,63 +106,58 @@ fontStyle1 = tkFont.Font(family="Blackadder ITC", size=25)
 fontStyle2 = tkFont.Font(family="Times New Roman", size=10)
 fontStyle3 = tkFont.Font(family="Blackadder ITC", size=15, weight="bold")
 fontStyle4 = tkFont.Font(family="Times New Roman", size=13)
-fontStyle5 = tkFont.Font(family="Times New Roman", size=25, weight="bold")
+fontStyle5 = tkFont.Font(family="Times New Roman", size=20, weight="bold")
 fontStyle6 = tkFont.Font(family="Times New Roman", size=15, weight="bold")
 fontStyle7 = tkFont.Font(family="Times New Roman", size=10)
 fontStyle8 = tkFont.Font(family="Blackadder ITC", size=13, weight="bold")
 fontStyle9 = tkFont.Font(family="Times New Roman", size=13, weight="bold")
+fontStyle10= tkFont.Font(family="Times New Roman", size=10, weight="bold")
 
 #inital username/passwords
 USERNAME = ["---"]*10
 PASSWORD = []
-OID = [None]*10
+OID = [None]
+LASTMODE=[]
 
+#Fill a list of current users and passwords from the database to be used in the GUI
+def populate_users():
 
-Data = db.conn('Users.db')
-records = db.fetch_users(Data)
-
-num = len(records)
-
-USERNAME.clear()
-PASSWORD.clear()
-OID.clear()
-for x in records:
-	USERNAME.append(x[0])
-	PASSWORD.append(x[1])
-	OID.append(str(x[2]))
-
-for x in range(10-num):
-	USERNAME.append("---")
-	OID.append("")
-
-
-global canvas_front
-
-#Startup Screen
-def frame1():
-	Start.place_forget()
-	canvas_reg.place_forget()
-	canvas_log.place_forget()
-	canvas_front.place(x = 150, y = 50)
-	Pacemaker_sign.place_forget()
-
-
+	global USERNAME, PASSWORD, OID
 	Data = db.conn('Users.db')
 	records = db.fetch_users(Data)
 
 	num = len(records)
 
+	#Refresh list if full
 	USERNAME.clear()
 	PASSWORD.clear()
 	OID.clear()
+	LASTMODE.clear()
 	for x in records:
 		USERNAME.append(x[0])
 		PASSWORD.append(x[1])
-		OID.append(str(x[2]))
+		LASTMODE.append(x[2])
+		OID.append(str(x[3]))
 
 	for x in range(10-num):
 		USERNAME.append("---")
-		OID.append("")
+
+global canvas_front
+
+#Startup screen includes transitions from all other screens
+def frame1():
+	Start.place_forget()
+	canvas_reg.place_forget()
+	canvas_log.place_forget()
+	canvas_interface.place_forget()
+	canvas_front.place(x = 150, y = 50)
+	Pacemaker_sign.place_forget()
+	password_entry2.delete(0,END)
+	username_entry.delete(0,END)
+	password_entry.delete(0,END)
+
+	#Refresh userlist
+	populate_users()
 
 	#refresh the user names for each button
 	User1.configure(text = "User: " + USERNAME[0])
@@ -174,47 +181,72 @@ def log(user_number):
 	canvas_front.place_forget()
 	canvas_log.place(x = 350, y = 50)
 	
-	global USER_ON
+	global USER_ON	#keep track of which user is logged on
 	USER_ON = user_number
 	username_label2.configure(text = "Username:  " + USERNAME[user_number])
+	password_entry2.focus_set()
 
+#Reset the mode buttons, save last mode the user was in and return to login screens
+def log_out():
+	Data = db.conn('Users.db')
+	exec(params.get_mode()+"_mode.configure(relief=RAISED)")
+	db.save_mode(Data, params.mode, OID[USER_ON])
+	Data.close()	
+	frame1()
 
 #Delete a record from database
 def delete_user(user_num):
 	Data = db.conn('Users.db')
 	db.delete(Data, OID[user_num])
 	frame1()
+	Data.close()
 
+#Register user screen
 def Reg():
 	canvas_front.place_forget()
 	canvas_reg.place(x = 350, y = 50)
+	username_entry.focus_set()
 
+#
 def reg_username_password():
 	Data = db.conn('Users.db')
 
 	#write into the data base
-	if(username_entry.get()!= "" and password_entry.get()!= "" and len(PASSWORD)<10):
-		db.register(Data, username_entry.get(), password_entry.get())
+	populate_users()
+	if(username_entry.get()!= "" and password_entry.get()!= "" and len(OID)<10):
+		db.register(Data, username_entry.get(), password_entry.get(), nominal)		#add entry to database
+		
+		#Populate a dictionary to fill a database with parameters for each mode
+		p_dict=params.save(OID[len(OID)-1])
+		for i in range(1,12):
+			p_dict["mode"]=i
+			db.save_params(Data, p_dict)
 		frame1()
-	elif(len(PASSWORD)>=10):
+	elif(len(OID)>=10):
 		reg_wrong.config(text = "Users full!")
 	elif(username_entry.get()== "" and password_entry.get()== ""):
 		reg_wrong.config(text = "Invalid Entry!")
 
-
+	#clear input fields
 	username_entry.delete(0,END)
 	password_entry.delete(0,END)
+	Data.close()
 	
-
+#Successful login transitions to the user interface screen
 def program_frame():
 	global connected
 	text = password_entry2.get()
 	password_entry2.delete(0,END) 					#Clear the entry
 	if(text == PASSWORD[USER_ON]):					#Check if the password entered is correct
 		canvas_interface.place(x = 50, y = 25)
-		Diff_Pacemaker.place(rely = 0.008, relx = 0.45)		#Display if a new pacemaker is connected
+		Diff_Pacemaker.place(rely = 0.5, relx = 0.2, anchor="center")		#Display if a new pacemaker is connected
 		Diff_Pacemaker.after(2500,lambda: Diff_Pacemaker.config(text = ""))
 		canvas_log.place_forget()
+
+		populate_users()
+		AOO_mode.configure(relief=RAISED)	#ensure correct button is shown as indented
+		params.mode=LASTMODE[USER_ON]		#determine last selected mode
+		mode_switch(params.get_mode())		#visually change all parameter settings
 	else:
 		pass_wrong.config(text="Wrong password, please try again!")
 		#print(USERNAME)
@@ -230,189 +262,79 @@ def program_frame():
 
 #Configure sliders for the different pacing modes. Labels are changed and values are reset to last saved.
 def mode_switch(m):
-	global mode
-	scales = ["lrl_scale.set(%d)", "url_scale.set(%d)", "a_amp_scale.set(%f)", "pw_scale.set(%f)", "rp_scale.set(%d)"]
-	i = 0
+	Data=db.conn('Users.db')
+
+	#Switch button indentation, change parameter mode
+	old_mode = params.mode_switch(m)	
+	exec(old_mode+"_mode.configure(relief=RAISED)")
+	exec(m+"_mode.configure(relief=SUNKEN)")
+
+	#Pull parameters from the database for the current mode
+	vals = db.load_params(Data, OID[USER_ON], params.mode)
+	params.update(vals)
+
+	#Change scales to reflect new parameters
+	for k in vals.keys():
+		if(k != 'uid' and k != 'mode'):
+			exec("{}_scale.set(params.{})".format(k,k))
 	
-	if m == "AOO":
-		mode = "AOO"	#Change global mode
-
-		#Show which mode the program is in visually
-		AOO_mode.configure(relief=SUNKEN)
-		VOO_mode.configure(relief=RAISED)
-		AAI_mode.configure(relief=RAISED)
-		VVI_mode.configure(relief=RAISED)
-
-		#Change labels and scale values
-		a_amp_scale.configure(label="Atrial Amplitude", from_=0.0, to=5.0, resolution=0.05)
-		pw_scale.configure(label="Atrial Pulse Width")
-		rp_scale.configure(label="Atrial Refractory Period")
-		LRL_att.configure(text="Lower Rate Limit:")
-		URL_att.configure(text="Upper Rate Limit:")
-		AMP_att.configure(text="Atrial Amplitude:")
-		PW_att.configure(text="Atrial Pulse Width:")
-		RP_att.configure(text="Atrial Refractory Period:", font=fontStyle6)
-
-		#Load last saved values to the scales
-		for e in AOO_params:
-			exec(scales[i] % AOO_params[e])
-			i=i+1
-		lvar.set(str(AOO_params["LRL"]))
-		uvar.set(str(AOO_params["URL"]))
-		avar.set(str(AOO_params["AMP"]))
-		pvar.set(str(AOO_params["PW"]))
-		rvar.set(str(AOO_params["RP"]))
-
-	elif m == "VOO":
-		mode = "VOO"
-		AOO_mode.configure(relief=RAISED)
-		VOO_mode.configure(relief=SUNKEN)
-		AAI_mode.configure(relief=RAISED)
-		VVI_mode.configure(relief=RAISED)
-		a_amp_scale.configure(label="Ventricular Amplitude", from_=0.0, to=5.0, resolution=0.05)
-		pw_scale.configure(label="Ventricular Pulse Width")
-		rp_scale.configure(label="Ventricular Refractory Period")
-		LRL_att.configure(text="Lower Rate Limit:")
-		URL_att.configure(text="Upper Rate Limit:")
-		AMP_att.configure(text="Ventricular Amplitude:")
-		PW_att.configure(text="Ventricular Pulse Width:")
-		RP_att.configure(text="Ventricular Refractory Period:", font=tkFont.Font(family="Times New Roman", size=13, weight="bold"))
-
-		for e in VOO_params:
-			exec(scales[i] % VOO_params[e])
-			i=i+1
-		lvar.set(str(VOO_params["LRL"]))
-		uvar.set(str(VOO_params["URL"]))
-		avar.set(str(VOO_params["AMP"]))
-		pvar.set(str(VOO_params["PW"]))
-		rvar.set(str(VOO_params["RP"]))
-			
-	elif m == "AAI":
-		mode = "AAI"
-		AOO_mode.configure(relief=RAISED)
-		VOO_mode.configure(relief=RAISED)
-		AAI_mode.configure(relief=SUNKEN)
-		VVI_mode.configure(relief=RAISED)
-		a_amp_scale.configure(label="Atrial Amplitude", from_=0.0, to=7.0, resolution = 0.1 if(a_amp_scale.get() >= 0.5 and a_amp_scale.get() <= 3.2) else 0.5)
-		pw_scale.configure(label="Atrial Pulse Width")
-		rp_scale.configure(label="Atrial Refractory Period")
-		LRL_att.configure(text="Lower Rate Limit:")
-		URL_att.configure(text="Upper Rate Limit:")
-		AMP_att.configure(text="Atrial Amplitude:")
-		PW_att.configure(text="Atrial Pulse Width:")
-		RP_att.configure(text="Atrial Refractory Period:", font=fontStyle6)
-
-		for e in AAI_params:
-			exec(scales[i] % AAI_params[e])
-			i=i+1
-		lvar.set(str(AAI_params["LRL"]))
-		uvar.set(str(AAI_params["URL"]))
-		avar.set(str(AAI_params["AMP"]))
-		pvar.set(str(AAI_params["PW"]))
-		rvar.set(str(AAI_params["RP"]))
-			
-	elif m == "VVI":
-		mode = "VVI"
-		settings = '''
-AOO_mode.configure(relief=RAISED)
-VOO_mode.configure(relief=RAISED)
-AAI_mode.configure(relief=RAISED)
-VVI_mode.configure(relief=SUNKEN)
-a_amp_scale.configure(label="Ventricular Amplitude", from_=0.0, to=7.0, resolution = 0.1 if(a_amp_scale.get() >= 0.5 and a_amp_scale.get() <= 3.2) else 0.5)
-pw_scale.configure(label="Ventricular Pulse Width")
-rp_scale.configure(label="Ventricular Refractory Period")
-LRL_att.configure(text="Lower Rate Limit:")
-URL_att.configure(text="Upper Rate Limit:")
-AMP_att.configure(text="Ventricular Amplitude:")
-PW_att.configure(text="Ventricular Pulse Width:")
-RP_att.configure(text="Ventricular Refractory Period:", font=tkFont.Font(family="Times New Roman", size=13, weight="bold"))
-		'''
-		exec(settings)
-		for e in VVI_params:
-			exec(scales[i] % VVI_params[e])
-			i=i+1
-		lvar.set(str(VVI_params["LRL"]))
-		uvar.set(str(VVI_params["URL"]))
-		avar.set(str(VVI_params["AMP"]))
-		pvar.set(str(VVI_params["PW"]))
-		rvar.set(str(VVI_params["RP"]))
+	#Update scale dict for later use
+	for k, v in params.save(OID[USER_ON]).items():
+		if(k != 'mode' and k != 'uid'):
+			scales[k] = v
+	
+	#Populate the attribute values to display to the user
+	i=0
+	for k,v in scales.items():
+		if(k != "mode"):
+			varlist[i].set(str(v))
+			i = i+1
+		
+	db.save_mode(Data, params.mode, OID[USER_ON])
+	Data.close()	
 		
 #Save current scale values to mode-specified parameters
 def save():
-	global AOO_params, VOO_params, AAI_params, VVI_params
-	scales = ["lrl_scale.get()", "url_scale.get()", "a_amp_scale.get()", "pw_scale.get()", "rp_scale.get()"]
-	i = 0
-	if mode == "AOO":
-		for e in AOO_params:
-			AOO_params[e] = eval(scales[i])
-			i=i+1
-		lvar.set(str(AOO_params["LRL"]))
-		uvar.set(str(AOO_params["URL"]))
-		avar.set(str(AOO_params["AMP"]))
-		pvar.set(str(AOO_params["PW"]))
-		rvar.set(str(AOO_params["RP"]))
-	elif mode == "VOO":
-		for e in VOO_params:
-			VOO_params[e] = eval(scales[i])
-			i=i+1
-		lvar.set(str(VOO_params["LRL"]))
-		uvar.set(str(VOO_params["URL"]))
-		avar.set(str(VOO_params["AMP"]))
-		pvar.set(str(VOO_params["PW"]))
-		rvar.set(str(VOO_params["RP"]))
-	elif mode == "AAI":
-		for e in AAI_params:
-			AAI_params[e] = eval(scales[i])
-			i=i+1
-		lvar.set(str(AAI_params["LRL"]))
-		uvar.set(str(AAI_params["URL"]))
-		avar.set(str(AAI_params["AMP"]))
-		pvar.set(str(AAI_params["PW"]))
-		rvar.set(str(AAI_params["RP"]))
-	elif mode == "VVI":
-		for e in VVI_params:
-			VVI_params[e] = eval(scales[i])
-			i=i+1
-		lvar.set(str(VVI_params["LRL"]))
-		uvar.set(str(VVI_params["URL"]))
-		avar.set(str(VVI_params["AMP"]))
-		pvar.set(str(VVI_params["PW"]))
-		rvar.set(str(VVI_params["RP"]))
 
-def change_LRL_res(r):
-	lrl_scale.configure(resolution = 1 if(lrl_scale.get() > 49 and lrl_scale.get() < 91) else 5)
-	if lrl_scale.get() > url_scale.get():
-		url_scale.set(lrl_scale.get())
-
-def change_URL_lim(l):
-	if lrl_scale.get() > url_scale.get():
-		lrl_scale.set(url_scale.get())
-
-'''
-#change_XXX_res functions account for the different resolutions in different ranges for each scale
-
-def change_AMP_res(r):
-	if mode == "AAI" or mode == "VVI":
-		a_amp_scale.configure(from_=0.0, to=7.0, resolution = 0.1 if(a_amp_scale.get() >= 0.5 and a_amp_scale.get() <= 3.2) else 0.5)
-	else:
-		if float(r) <= 1:
-			a_amp_scale.set(0)
-		elif float(r) >= 1 and float(r) <= 2:
-			a_amp_scale.set(1.25)
-		elif float(r) > 2 and float(r) <= 3:
-			a_amp_scale.set(2.5)
-		elif float(r) >= 3 and float(r) <= 4:
-			a_amp_scale.set(3.75)
-		elif float(r) >= 4:
-			a_amp_scale.set(5)
+	#Tell the user that parameters have been saved
+	saveinfo.configure(text="{}'s {} Parameters Have Been Saved".format(USERNAME[USER_ON], params.get_mode()))
+	saveinfo.place(relx=0.5, rely=0.5, anchor="center")
 	
+	#Add correct mode to scales dict tp update all parameters with
+	scales["mode"] = params.mode
+	params.update(scales)
+	p_dict=params.save(OID[USER_ON])	#Ensure values are being saved to the correct user
 
-def change_PW_res(r):
-	pw_scale.configure(resolution = 0.05 if(pw_scale.get() <= 0.1) else 0.1)
-	if pw_scale.get() == 0:
-		pw_scale.set(0.05)
+	#Populate the attribute values to display to the user
+	i=0
+	for k,v in scales.items():
+		if(k != "mode"):
+			varlist[i].set(str(v))
+			i = i+1
+	
+	#Update the database with new parameters and last mode selected
+	Data = db.conn('Users.db')
+	db.save_params(Data, p_dict)
+	db.save_mode(Data, params.mode, OID[USER_ON])
+	Data.close()
+	saveinfo.after(2500, lambda: saveinfo.configure(text="", fg="#990000"))
 
-'''
+#Called every time a scale moves tp update the scale dict
+def change(val,par):
+	global scales
+	scales[par]=val
+
+	#ensure the upper limit and lower limit never cross
+	if(par=="lrl"):
+		lrl_scale.configure(resolution = 1 if(float(lrl_scale.get()) > 49.8 and float(lrl_scale.get()) < 90.2) else 5)
+		if lrl_scale.get() > url_scale.get():
+			url_scale.set(lrl_scale.get())
+	if(par=="url"):
+		if lrl_scale.get() > url_scale.get():
+			lrl_scale.set(url_scale.get())
+
+
+
 def egram():
 	print("hi")
 	new_window = tk.Toplevel(root)
@@ -428,14 +350,13 @@ def show():
 	print("Show all the users and their passwords")
 	print(USERNAME)
 	print(PASSWORD)
-	print("AOO parameters: ")
-	print("\tLRL: " + str(AOO_params["LRL"]) + "\t\tURL: " + str(AOO_params["URL"]) + "\tAMP: " + str(AOO_params["AMP"]) + "\tPW: " + str(AOO_params["PW"]) + "\tRP: " + str(AOO_params["RP"]))
-	print("VOO parameters: ")
-	print("\tLRL: " + str(VOO_params["LRL"]) + "\t\tURL: " + str(VOO_params["URL"]) + "\tAMP: " + str(VOO_params["AMP"]) + "\tPW: " + str(VOO_params["PW"]) + "\tRP: " + str(VOO_params["RP"]))
-	print("AAI parameters: ")
-	print("\tLRL: " + str(AAI_params["LRL"]) + "\t\tURL: " + str(AAI_params["URL"]) + "\tAMP: " + str(AAI_params["AMP"]) + "\tPW: " + str(AAI_params["PW"]) + "\tRP: " + str(AAI_params["RP"]))
-	print("VVI parameters: ")
-	print("\tLRL: " + str(VVI_params["LRL"]) + "\t\tURL: " + str(VVI_params["URL"]) + "\tAMP: " + str(VVI_params["AMP"]) + "\tPW: " + str(VVI_params["PW"]) + "\tRP: " + str(VVI_params["RP"]))
+	print("Parameters:")
+	for p, v in params.save(OID[USER_ON]).items():
+		print(p, v)
+	print("Scales Dictionary:")
+	for p, v in scales.items():
+		print(p,v)
+	
 
 
 #Starting Page:
@@ -545,21 +466,27 @@ pass_wrong.place(relx = 0.26,rely = 0.55)
 #USER INTERFACE CANVAS
 canvas_interface = tk.Frame(root, height = HEIGHT-50, width = WIDTH, bg = CANVAS_BACKGROUND_COLOR)
 
-
+#Borders
 header = tk.Canvas(canvas_interface, height=20, width=WIDTH-50, bg=CANVAS_BACKGROUND_COLOR, bd=0, highlightthickness=0)
 footer = tk.Canvas(canvas_interface, height=20, width=WIDTH-50, bg=CANVAS_BACKGROUND_COLOR, bd=0, highlightthickness=0)
 left = tk.Frame(canvas_interface, bg=CANVAS_BACKGROUND_COLOR, width=25, height=HEIGHT-50)
 right = tk.Frame(canvas_interface, bg=CANVAS_BACKGROUND_COLOR, width=25, height=HEIGHT-50)
-foot_label = tk.Label(header, text = " ", font = tkFont.Font(size=10), bg = CANVAS_BACKGROUND_COLOR, fg = "#990000")
-header.grid(row=0, column=1, columnspan=6, sticky="NSEW")
+foot_label = tk.Label(header, text = " ", font = fontStyle7, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000")
+
 footer.grid(row=10, column=1, columnspan=6, sticky="NSEW")
 left.grid(row=0, column=0, rowspan=11)
 right.grid(row=0, column=7, rowspan=11)
+header.grid(row=0, column=1, columnspan=6, sticky="NSEW")
 foot_label.grid(row=0, column=1, columnspan=6)
 
+#Return to login screen
+logout = tk.Button(header, text="Log Out", font=fontStyle7, bg="#990000", fg="#FFFFFF", command = log_out)
+
+logout.place(relx=0.972, rely=0.5, anchor='center')
+
 #Show pacemaker connected status. Check if new device is connected
-connected_label = tk.Label(header, text = "Not Connected", font = tkFont.Font(size=10), bg = CANVAS_BACKGROUND_COLOR, fg = "#990000")
-Diff_Pacemaker = tk.Label(header, text = "A New Pacemaker detected", font = tkFont.Font(size=10), bg = CANVAS_BACKGROUND_COLOR, fg = "#990000")
+connected_label = tk.Label(header, text = "Not Connected", font = fontStyle7, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000")
+Diff_Pacemaker = tk.Label(header, text = "A New Pacemaker detected", font = fontStyle7, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000")
 connected = header.create_oval(100,5,110,15,fill = "red")
 
 connected_label.grid(row=0, column=1, columnspan=6)
@@ -570,17 +497,17 @@ EGRAM_WINDOW = tk.Button(canvas_interface, text = "EGRAM", font = fontStyle6, bg
 EGRAM_WINDOW.grid(row=2, column=6, sticky="NSEW")
 
 #Mode switching buttons
-AOO_mode = tk.Button(canvas_interface, text = "AOO", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("AOO"), relief=SUNKEN)
-VOO_mode = tk.Button(canvas_interface, text = "VOO", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("VOO"))
-AAI_mode = tk.Button(canvas_interface, text = "AAI", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("AAI"))
-VVI_mode = tk.Button(canvas_interface, text = "VVI", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("VVI"))
-DOO_mode = tk.Button(canvas_interface, text = "DOO", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("DOO"))
-AOOR_mode = tk.Button(canvas_interface, text = "AOOR", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("AOOR"))
-VOOR_mode = tk.Button(canvas_interface, text = "VOOR", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("VOOR"))
-AAIR_mode = tk.Button(canvas_interface, text = "AAIR", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("AAIR"))
-VVIR_mode = tk.Button(canvas_interface, text = "VVIR", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("VVIR"))
-DOOR_mode = tk.Button(canvas_interface, text = "DOOR", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("DOOR"))
-DDDR_mode = tk.Button(canvas_interface, text = "DDDR", font = fontStyle8, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: params.mode_switch("DDDR"))
+AOO_mode = tk.Button(canvas_interface, text = "AOO", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("AOO"), relief=SUNKEN)
+VOO_mode = tk.Button(canvas_interface, text = "VOO", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("VOO"))
+AAI_mode = tk.Button(canvas_interface, text = "AAI", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("AAI"))
+VVI_mode = tk.Button(canvas_interface, text = "VVI", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("VVI"))
+DOO_mode = tk.Button(canvas_interface, text = "DOO", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("DOO"))
+AOOR_mode = tk.Button(canvas_interface, text = "AOOR", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("AOOR"))
+VOOR_mode = tk.Button(canvas_interface, text = "VOOR", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("VOOR"))
+AAIR_mode = tk.Button(canvas_interface, text = "AAIR", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("AAIR"))
+VVIR_mode = tk.Button(canvas_interface, text = "VVIR", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("VVIR"))
+DOOR_mode = tk.Button(canvas_interface, text = "DOOR", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("DOOR"))
+DDDR_mode = tk.Button(canvas_interface, text = "DDDR", font = fontStyle6, width=12, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command = lambda: mode_switch("DDDR"))
 
 AOO_mode.grid(row=1, column=1, sticky="NSEW")
 VOO_mode.grid(row=1, column=2, sticky="NSEW")
@@ -594,28 +521,23 @@ VVIR_mode.grid(row=2, column=4, sticky="NSEW")
 DOOR_mode.grid(row=2, column=5, sticky="NSEW")
 DDDR_mode.grid(row=1, column=6, sticky="NSEW")
 
-for i in range(8):
-	if(i==0 or i==7): canvas_interface.grid_columnconfigure(i, weight=1)
-	else: canvas_interface.grid_columnconfigure(i, weight=3)
-for i in range(11):
-	if(i==0 or i==10): canvas_interface.grid_rowconfigure(i, weight=1)
-	else: canvas_interface.grid_rowconfigure(i, weight=2)
+
 
 #Sliders to change the parameter values
-lrl_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Lower Rate Limit", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=30, to=175, resolution=1)
-url_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Upper Rate Limit", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=50, to=175, resolution=5)
-a_amp_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Atrial Amplitude", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
-v_amp_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Ventricular Amplitude", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
-pw_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Pulse Width", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=30, resolution=1)
-a_sensi_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Atrial Sensitivity", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
-v_sensi_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Ventricular Sensitivity", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100)
-rp_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="A/V Refractory Period", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=150, to=500, resolution=10)
-av_delay_scale =   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="A/V Delay", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=70, to=300, resolution=10)
-msr_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Maximum Sensor Rate", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=50, to=175, resolution=5)
-act_thresh_scale = Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Activity Threshold", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=7, resolution=1)
-react_t_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Reaction Time", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=10, to=50, resolution=10)
-res_fact_scale =   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Response Factor", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=16, resolution=1)
-rec_t_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Recovery Time", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=120, to=960, resolution=60)
+lrl_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Lower Rate Limit", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=30, to=175, resolution=1, command=lambda val: change(val, "lrl"))
+url_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Upper Rate Limit", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=50, to=175, resolution=5, command=lambda val: change(val, "url"))
+a_amp_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Atrial Amplitude", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100, command=lambda val: change(val, "a_amp"))
+v_amp_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Ventricular Amplitude", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100, command=lambda val: change(val, "v_amp"))
+pw_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Pulse Width", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=30, resolution=1, command=lambda val: change(val, "pw"))
+a_sensi_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Atrial Sensitivity", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100, command=lambda val: change(val, "a_sensi"))
+v_sensi_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Ventricular Sensitivity", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=0, to=5000, resolution=100, command=lambda val: change(val, "v_sensi"))
+rp_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="A/V Refractory Period", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=150, to=500, resolution=10, command=lambda val: change(val, "rp"))
+av_delay_scale =   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="A/V Delay", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=70, to=300, resolution=10, command=lambda val: change(val, "av_delay"))
+act_thresh_scale = Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Activity Threshold", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=7, resolution=1, command=lambda val: change(val, "act_thresh"))
+react_t_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Reaction Time", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=10, to=50, resolution=10, command=lambda val: change(val, "react_t"))
+res_fact_scale =   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Response Factor", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=1, to=16, resolution=1, command=lambda val: change(val, "res_fact"))
+rec_t_scale =	   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Recovery Time", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=120, to=960, resolution=60, command=lambda val: change(val, "rec_t"))
+msr_scale =		   Scale(canvas_interface, orient=HORIZONTAL, width=18, sliderlength="30", label="Maximum Sensor Rate", font = fontStyle7, troughcolor="white", relief=SUNKEN, bg="#80aaff", from_=50, to=175, resolution=5, command=lambda val: change(val, "msr"))
 
 lrl_scale.grid(row=3, column=1, columnspan=2, sticky="NSEW")
 url_scale.grid(row=4, column=1, columnspan=2, sticky="NSEW")
@@ -626,50 +548,39 @@ a_sensi_scale.grid(row=8, column=1, columnspan=2, sticky="NSEW")
 v_sensi_scale.grid(row=9, column=1, columnspan=2, sticky="NSEW")
 rp_scale.grid(row=3, column=3, columnspan=2, sticky="NSEW")
 av_delay_scale.grid(row=4, column=3, columnspan=2, sticky="NSEW")
-msr_scale.grid(row=5, column=3, columnspan=2, sticky="NSEW")
-act_thresh_scale.grid(row=6, column=3, columnspan=2, sticky="NSEW")
-react_t_scale.grid(row=7, column=3, columnspan=2, sticky="NSEW")
-res_fact_scale.grid(row=8, column=3, columnspan=2, sticky="NSEW")
-rec_t_scale.grid(row=9, column=3, columnspan=2, sticky="NSEW")
+act_thresh_scale.grid(row=5, column=3, columnspan=2, sticky="NSEW")
+react_t_scale.grid(row=6, column=3, columnspan=2, sticky="NSEW")
+res_fact_scale.grid(row=7, column=3, columnspan=2, sticky="NSEW")
+rec_t_scale.grid(row=8, column=3, columnspan=2, sticky="NSEW")
+msr_scale.grid(row=9, column=3, columnspan=2, sticky="NSEW")
 
 
 #AOO nominal values
-lrl_scale.set(60)
-url_scale.set(120)
-a_amp_scale.set(5000)
-v_amp_scale.set(5000)
-pw_scale.set(1)
-a_sensi_scale.set(0)
-v_sensi_scale.set(0)
-rp_scale.set(250)
-av_delay_scale.set(150)
-msr_scale.set(300)
-act_thresh_scale.set(4)
-react_t_scale.set(30)
-res_fact_scale.set(8)
-rec_t_scale.set(300)
+lrl_scale.set(params.lrl)
+url_scale.set(params.url)
+a_amp_scale.set(params.a_amp)
+v_amp_scale.set(params.v_amp)
+pw_scale.set(params.pw)
+a_sensi_scale.set(params.a_sensi)
+v_sensi_scale.set(params.v_sensi)
+rp_scale.set(params.rp)
+av_delay_scale.set(params.av_delay)
+act_thresh_scale.set(params.act_thresh)
+react_t_scale.set(params.react_t)
+res_fact_scale.set(params.res_fact)
+rec_t_scale.set(params.rec_t)
+msr_scale.set(params.msr)
 
-params.lrl =lrl_scale.get()
-params.url =url_scale.get()
-params.a_amp =a_amp_scale.get()
-params.v_amp =v_amp_scale.get()
-params.pw =pw_scale.get()
-params.a_sensi =a_sensi_scale.get()
-params.v_sensi =v_sensi_scale.get()
-params.rp =rp_scale.get()
-params.av_delay =av_delay_scale.get()
-params.msr =msr_scale.get()
-params.act_thresh =act_thresh_scale.get()
-params.react_t =react_t_scale.get()
-params.res_fact =res_fact_scale.get()
-params.rec_t =rec_t_scale.get()
+#scales is used to collect the scale values and use them to update parameter values
+scales = {"lrl":lrl_scale.get(), "url":url_scale.get(), "a_amp":a_amp_scale.get(), "v_amp":v_amp_scale.get()\
+	     , "pw":pw_scale.get(), "a_sensi":a_sensi_scale.get(), "v_sensi":v_sensi_scale.get()\
+	     , "rp":rp_scale.get(), "av_delay":av_delay_scale.get(), "act_thresh":act_thresh_scale.get()\
+		 , "react_t":react_t_scale.get(), "res_fact":res_fact_scale.get(), "rec_t":rec_t_scale.get(), "msr":msr_scale.get()}
 
-print(params.save())
-
-
-att = LabelFrame(canvas_interface, text="Attributes", bg="white", fg="#990000", font = fontStyle5, height=419, width=335, labelanchor=N, relief=RAISED)
 
 #Display parameter values
+att = LabelFrame(canvas_interface, text="Attributes", bg="white", fg="#990000", font = fontStyle5, height=419, width=335, labelanchor=N, relief=RAISED)
+
 lrl_att = Label(att, text="Lower Rate:", font=fontStyle9, bg="white")
 url_att = Label(att, text="Upper Rate:", font=fontStyle9, bg="white")
 a_amp_att = Label(att, text="Atrial Amplitude:", font=fontStyle9, bg="white")
@@ -679,28 +590,33 @@ a_sensi_att = Label(att, text="Atrial Sensitivity:", font=fontStyle9, bg="white"
 v_sensi_att = Label(att, text="Ventricular Sensitivity:", font=fontStyle9, bg="white")
 rp_att = Label(att, text="A/V Refractory Period:", font=fontStyle9, bg="white")
 av_delay_att =  Label(att, text="A/V Delay:", font=fontStyle9, bg="white")
-msr_att =  Label(att, text="Maximum Sensor Rate:", font=fontStyle9, bg="white")
 act_thresh_att = Label(att, text="Activity Threshold:", font=fontStyle9, bg="white")
 react_t_att = Label(att, text="Reaction Time:", font=fontStyle9, bg="white")
 res_fact_att = Label(att, text="Response Factor:", font=fontStyle9, bg="white")
 rec_t_att =  Label(att, text="Recovery Time:", font=fontStyle9, bg="white")
+msr_att =  Label(att, text="Maximum Sensor Rate:", font=fontStyle9, bg="white")
 
-lrl_val = Label(att, textvariable=str(params.lrl), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-url_val = Label(att, textvariable=str(params.url), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-a_amp_val = Label(att, textvariable=str(params.a_amp), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-v_amp_val =  Label(att, textvariable=str(params.v_amp), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-pw_val =  Label(att, textvariable=str(params.pw), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-a_sensi_val = Label(att, textvariable=str(params.a_sensi), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-v_sensi_val = Label(att, textvariable=str(params.v_sensi), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-rp_val = Label(att, textvariable=str(params.rp), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-av_delay_val =  Label(att, textvariable=str(params.av_delay), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-msr_val =  Label(att, textvariable=str(params.msr), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-act_thresh_val = Label(att, textvariable=str(params.act_thresh), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-react_t_val = Label(att, textvariable=str(params.react_t), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-res_fact_val = Label(att, textvariable=str(params.res_fact), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
-rec_t_val =  Label(att, textvariable=str(params.rec_t), font=fontStyle9, bg="white", fg="#990000", width=4, relief=RIDGE)
+lrl_val =		 Label(att, textvariable=lrlvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+url_val =		 Label(att, textvariable=urlvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+a_amp_val =		 Label(att, textvariable=aampvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+v_amp_val =		 Label(att, textvariable=vampvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+pw_val =		 Label(att, textvariable=pwvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+a_sensi_val =	 Label(att, textvariable=asensivar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+v_sensi_val =	 Label(att, textvariable=vsensivar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+rp_val =		 Label(att, textvariable=rpvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+av_delay_val =	 Label(att, textvariable=avdelayvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+act_thresh_val = Label(att, textvariable=actthreshvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+react_t_val =	 Label(att, textvariable=reacttvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+res_fact_val =	 Label(att, textvariable=resfactvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+rec_t_val =		 Label(att, textvariable=rectvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
+msr_val =		 Label(att, textvariable=msrvar, font=fontStyle9, bg="white", fg="#990000", width=6, relief=RIDGE)
 
-
+#Populate attribute values
+i=0
+for p, v in scales.items():
+	if((p != "mode") or (p != "uid")):
+		varlist[i].set(str(v))
+		i = i+1
 
 
 att.grid(row=3, column=5, rowspan=7, columnspan=2, sticky="NSEW")
@@ -714,11 +630,11 @@ a_sensi_att.grid(row=5, column=0, sticky="W")
 v_sensi_att.grid(row=6, column=0, sticky="W")
 rp_att.grid(row=7, column=0, sticky="W")
 av_delay_att.grid(row=8, column=0, sticky="W")
-msr_att.grid(row=9, column=0, sticky="W")
-act_thresh_att.grid(row=10, column=0, sticky="W")
-react_t_att.grid(row=11, column=0, sticky="W")
-res_fact_att.grid(row=12, column=0, sticky="W")
-rec_t_att.grid(row=13, column=0, sticky="W")
+act_thresh_att.grid(row=9, column=0, sticky="W")
+react_t_att.grid(row=10, column=0, sticky="W")
+res_fact_att.grid(row=11, column=0, sticky="W")
+rec_t_att.grid(row=12, column=0, sticky="W")
+msr_att.grid(row=13, column=0, sticky="W")
 
 lrl_val.grid(row=0, column=1, sticky="W")
 url_val.grid(row=1, column=1, sticky="W")
@@ -729,17 +645,26 @@ a_sensi_val.grid(row=5, column=1, sticky="W")
 v_sensi_val.grid(row=6, column=1, sticky="W")
 rp_val.grid(row=7, column=1, sticky="W")
 av_delay_val.grid(row=8, column=1, sticky="W")
-msr_val.grid(row=9, column=1, sticky="W")
-act_thresh_val.grid(row=10, column=1, sticky="W")
-react_t_val.grid(row=11, column=1, sticky="W")
-res_fact_val.grid(row=12, column=1, sticky="W")
-rec_t_val.grid(row=13, column=1, sticky="W")
+act_thresh_val.grid(row=9, column=1, sticky="W")
+react_t_val.grid(row=10, column=1, sticky="W")
+res_fact_val.grid(row=11, column=1, sticky="W")
+rec_t_val.grid(row=12, column=1, sticky="W")
+msr_val.grid(row=13, column=1, sticky="W")
 
 
-
+#Save values button
 set_butt = Button(att, text = "Accept Values", font = fontStyle3, bg = CANVAS_BACKGROUND_COLOR, fg = "#990000", command=save)
+saveinfo = Label(header, text="", font=fontStyle10, fg="#990000", bg=CANVAS_BACKGROUND_COLOR)
 
 set_butt.grid(row=14, column=0, rowspan=2, columnspan=2, sticky="NSEW")
+
+#Adjust row height/column width
+for i in range(8):
+	if(i==0 or i==7): canvas_interface.grid_columnconfigure(i, weight=1)
+	else: canvas_interface.grid_columnconfigure(i, weight=3)
+for i in range(11):
+	if(i==0 or i==10): canvas_interface.grid_rowconfigure(i, weight=1)
+	else: canvas_interface.grid_rowconfigure(i, weight=2)
 
 att.grid_columnconfigure(0, weight=7)
 att.grid_columnconfigure(1, weight=1)
