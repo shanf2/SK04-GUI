@@ -29,7 +29,7 @@ class Parameters:
         self.v_sensi = 0
         self.rp = 320
         self.av_delay = 150
-        self.msr = 120
+        self.msr = 120   #NOT USED IN SIMULINK FILE PARAMETER WILL NOT BE SEND TO PACEMAKER
         self.act_thresh = 4
         self.react_t = 30
         self.res_fact = 8
