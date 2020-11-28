@@ -9,6 +9,7 @@ import serial as sr
 import time
 import parameters as P
 import db_utilities as db
+from struct import *
 
 mode = "AOO"	#Initialization mode: no pacing
 HEIGHT = 600    #dimension of the starting window
@@ -44,20 +45,101 @@ rectvar = StringVar()
 msrvar = StringVar()
 varlist=[ lrlvar, urlvar, aampvar, vampvar, pwvar, asensivar, vsensivar, rpvar\
 	    , avdelayvar, actthreshvar, reacttvar, resfactvar, rectvar, msrvar ]
-  
-ser=sr.Serial()
+
+ser =sr
+#Initialize the serial communication
+def init_serial():
+	global ser
+	global connected
+	global header
+	try:
+		ser = sr.Serial('COM6', baudrate = 115200, bytesize=sr.EIGHTBITS , timeout = 1)
+		if ser.isOpen():
+			header.delete(connected)
+			connected = header.create_oval(80,5,90,15,fill = "green")
+			connected_label.configure(text = 'Connected')
+			print('connected')
+			ser.close()
+	except sr.serialutil.SerialException:
+		header.delete(connected)
+		connected = header.create_oval(100,5,110,15,fill = "red")
+		connected_label.configure(text = 'Not Connected')
+		print('No Device Detected')
 
 #Call the Serial Initilization Function, Main Program Starts from here
-def send_data(data):
+def send_data():
     global ser
-    init_serial()
-    ser.write(data)
+    if(ser.isOpen()==False):
+    	init_serial()
+    ser.open()
+    '''
+	serial_status = 0x16
+	serial_write = 0x55
+	serial_mode = params.mode
+	serial_LRL = params.lrl
+	serial_URL = params.url
+	serial_A_Amplitude = params.a_amp
+	serial_V_Amplitude = params.v_amp
+	serial_Pulsewidth = params.pw
+	serial_A_Sensitivity = params.a_sensi
+	serial_V_Sensitivity = params.v_sensi
+	serial_Refractory = params.rp
+	serial_AV_Delay = params.av_delay
+	serial_Activity_Threshold = params.act_thresh
+	serial_Reaction_time = params.react_t
+	serial_Resopnse_factor = params.res_fact
+	serial_Recovery_time = params.rec_t
+
+	serial_data = pack('>BBBBBHHHHHHHHBHH',serial_status,serial_write,serial_mode,serial_LRL,serial_URL,serial_A_Amplitude,
+						serial_V_Amplitude,serial_Pulsewidth,serial_A_Sensitivity,serial_V_Sensitivity,serial_Refractory,serial_Hysterisis,
+						serial_MSR,serial_Activity_Threshold,serial_Reaction_time,serial_Resopnse_factor,serial_Recovery_time)
+	'''
+    ser.write(serial_Data)
     ser.close()
 
-def read_data():
+
+def echo_data():
     global ser
-    init_serial()
-    bytes = ser.readline() #Read from Serial Port
+
+
+    ser.open()
+    #ser.reset_input_buffer()
+    serial_status = 22
+    serial_write = 34
+
+    serial_data = pack('>BB',22,34)
+    print(ser.name)
+
+    #ser.write(serial_data)
+    print(serial_data)
+
+    ser.write(serial_data)
+    s = ser.read(26) # read up to ten bytes (timeout)
+    #line = sr.readline()              
+
+    data_recevied = ser.read(26) #Read from Serial Port
+
+    #a = unpack('>BBBBBHHHHHHHHBHH',s)
+
+    '''
+
+    serial_status = 0x16
+	serial_write = 0x22
+	serial_mode = params.mode
+	serial_LRL = params.lrl
+	serial_URL = params.url
+	serial_A_Amplitude = params.a_amp
+	serial_V_Amplitude = params.v_amp
+	serial_Pulsewidth = params.pw
+	serial_A_Sensitivity = params.a_sensi
+	serial_V_Sensitivity = params.v_sensi
+	serial_Refractory = params.rp
+	serial_AV_Delay = params.av_delay
+	serial_Activity_Threshold = params.act_thresh
+	serial_Reaction_time = params.react_t
+	serial_Resopnse_factor = params.res_fact
+	serial_Recovery_time = params.rec_t 
+    '''
     ser.close()
 
 #Background image
@@ -247,18 +329,11 @@ def program_frame():
 		AOO_mode.configure(relief=RAISED)	#ensure correct button is shown as indented
 		params.mode=LASTMODE[USER_ON]		#determine last selected mode
 		mode_switch(params.get_mode())		#visually change all parameter settings
+		init_serial()
 	else:
 		pass_wrong.config(text="Wrong password, please try again!")
 		#print(USERNAME)
 		#print(PASSWORD)
-	try:
-		ser = sr.Serial('COM6', baudrate = 115200, timeout = 1)
-		if ser.isOpen():
-			header.delete(connected)
-			connected = header.create_oval(100,5,110,15,fill = "green")
-			connected_label.configure(text = 'Connected')
-	except sr.serialutil.SerialException:
-		print('No Device Detected')
 
 #Configure sliders for the different pacing modes. Labels are changed and values are reset to last saved.
 def mode_switch(m):
@@ -342,6 +417,7 @@ def egram():
 	new_window.geometry("700x500")
 	text = tk.Label(new_window,text = "New window")
 	text.place(relx=0.5,rely = 0.5)
+	read_data()
 
 
 
