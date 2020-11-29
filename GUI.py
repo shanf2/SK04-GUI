@@ -18,8 +18,8 @@ USER_ON = None        #Indicate which user is logged in
 CANVAS_BACKGROUND_COLOR = "#80aaff"
 
 #Variables used in egram
-VENT_SIGNAL = np.array([]) #ventrical signal
-ART_SIGNAL = np.array([])  #artiary signal
+VENT_SIG = np.array([]) #ventrical signal
+ART_SIG = np.array([])  #artiary signal
 
 root =tk.Tk()
 root.title('Heart Pacemaker')
@@ -72,74 +72,72 @@ def send_data():
     if(ser.isOpen()==False):
     	init_serial()
     ser.open()
-    '''
-	serial_status = 0x16
-	serial_write = 0x55
-	serial_mode = params.mode
-	serial_LRL = params.lrl
-	serial_URL = params.url
-	serial_A_Amplitude = params.a_amp
-	serial_V_Amplitude = params.v_amp
-	serial_Pulsewidth = params.pw
-	serial_A_Sensitivity = params.a_sensi
-	serial_V_Sensitivity = params.v_sensi
-	serial_Refractory = params.rp
-	serial_AV_Delay = params.av_delay
-	serial_Activity_Threshold = params.act_thresh
-	serial_Reaction_time = params.react_t
-	serial_Resopnse_factor = params.res_fact
-	serial_Recovery_time = params.rec_t
 
-	serial_data = pack('>BBBBBHHHHHHHHBHH',serial_status,serial_write,serial_mode,serial_LRL,serial_URL,serial_A_Amplitude,
-						serial_V_Amplitude,serial_Pulsewidth,serial_A_Sensitivity,serial_V_Sensitivity,serial_Refractory,serial_Hysterisis,
-						serial_MSR,serial_Activity_Threshold,serial_Reaction_time,serial_Resopnse_factor,serial_Recovery_time)
-	'''
+    serial_status = 0x16
+    serial_write = 0x55
+    serial_mode = params.mode
+    serial_LRL = params.lrl
+    serial_URL = params.url
+    serial_A_Amplitude = params.a_amp
+    serial_V_Amplitude = params.v_amp
+    serial_Pulsewidth = params.pw
+    serial_A_Sensitivity = params.a_sensi
+    serial_V_Sensitivity = params.v_sensi
+    serial_Refractory = params.rp
+    serial_AV_Delay = params.av_delay
+    serial_Activity_Threshold = params.act_thresh
+    serial_Reaction_time = params.react_t
+    serial_Resopnse_factor = params.res_fact
+    serial_Recovery_time = params.rec_t
+    serial_MSR = params.msr
+
+    serial_data = pack('>BBBBBHHHHHHHHBHHB',serial_status,serial_write,serial_mode,serial_LRL,serial_URL,serial_A_Amplitude,
+						serial_V_Amplitude,serial_Pulsewidth,serial_A_Sensitivity,serial_V_Sensitivity,serial_Refractory,serial_AV_Delay,
+						serial_Activity_Threshold,serial_Reaction_time,serial_Resopnse_factor,serial_Recovery_time,serial_MSR)
+	
     ser.write(serial_Data)
+
     ser.close()
 
 
-def echo_data():
-    global ser
+def read_data():
+    global ser, mode, lrl, url, a_amp, v_amp, pw, a_sensi, v_sensi, rp, act_thresh, react_t, res_fact, rec_t , av_delay
 
+    if(ser.isOpen()==False):
+    	init_serial()
 
-    ser.open()
     #ser.reset_input_buffer()
-    serial_status = 22
-    serial_write = 34
+    serial_status = 0x16
+    serial_write = 0x22
 
-    serial_data = pack('>BB',22,34)
-    print(ser.name)
-
-    #ser.write(serial_data)
-    print(serial_data)
+    serial_data = pack('>BBBddd',serial_status,serial_write,0,0,0,0)
 
     ser.write(serial_data)
-    s = ser.read(26) # read up to ten bytes (timeout)
-    #line = sr.readline()              
 
-    data_recevied = ser.read(26) #Read from Serial Port
+    data_recevied = ser.read(24) #Read from Serial Port
 
-    #a = unpack('>BBBBBHHHHHHHHBHH',s)
-
-    '''
+    try:
+    	a = unpack('>BBBHHHHHHHBHHH',data_recevied)
+    except Exception:
+    	pass
 
     serial_status = 0x16
-	serial_write = 0x22
-	serial_mode = params.mode
-	serial_LRL = params.lrl
-	serial_URL = params.url
-	serial_A_Amplitude = params.a_amp
-	serial_V_Amplitude = params.v_amp
-	serial_Pulsewidth = params.pw
-	serial_A_Sensitivity = params.a_sensi
-	serial_V_Sensitivity = params.v_sensi
-	serial_Refractory = params.rp
-	serial_AV_Delay = params.av_delay
-	serial_Activity_Threshold = params.act_thresh
-	serial_Reaction_time = params.react_t
-	serial_Resopnse_factor = params.res_fact
-	serial_Recovery_time = params.rec_t 
-    '''
+    serial_write = 0x22
+    a[0] = mode
+    a[1] = lrl
+    a[2] = url
+    a[3] = a_amp
+    a[4] = v_amp
+    a[5] = pw
+    a[6] = a_sensi
+    a[7] = v_sensi
+    a[8] = rp
+    a[9] = act_thresh
+    a[10] = react_t
+    a[11] = res_fact
+    a[12] = rec_t 
+    a[13] = av_delay
+
     ser.close()
 
 #Background image
@@ -408,16 +406,94 @@ def change(val,par):
 		if lrl_scale.get() > url_scale.get():
 			lrl_scale.set(url_scale.get())
 
+def plot_data():
+	global ser,new_window,VENT_SIG,ART_SIG,lines,lines2,canvas_egram
+
+	if(ser.isOpen()==False):
+		init_serial()
+
+	ser.open()
+
+	serial_status = 0x16
+	serial_write = 71
+
+	serial_data = pack('>BBBddd',serial_status,serial_write,0,0,0,0)
+
+	ser.write(serial_data)
+
+	data_recevied = ser.read(24)
+	serial_status = 0x16
+	serial_write = 98
+	serial_data = pack('>BBBddd',serial_status,serial_write,0,0,0,0)
+
+	ser.write(serial_data)
+
+	ser.close()
+
+	try:
+		a = unpack('>ddd',data_recevied)
+	except Exception:
+		a= (0,0,0);
+	if(len(VENT_SIG)<=100):
+		VENT_SIG = np.append(VENT_SIG,float(a[1]))
+		ART_SIG = np.append(ART_SIG,float(a[0]))
+	else:
+		VENT_SIG[0:99]=VENT_SIG[1:100]
+		ART_SIG[0:99] = ART_SIG[1:100]
+		VENT_SIG[100]=float(a[1])
+		ART_SIG[100]	=float(a[0])
+	lines.set_xdata(np.arange(0,len(VENT_SIG)))
+	lines.set_ydata(VENT_SIG)
+	lines2.set_xdata(np.arange(0,len(ART_SIG)))
+	lines2.set_ydata(ART_SIG)
+
+	canvas_egram.draw()
+
+	new_window.after(1, plot_data)
+
 
 
 def egram():
-	print("hi")
+	global new_window,lines,lines2,canvas_egram
 	new_window = tk.Toplevel(root)
 	new_window.title("Egram Graph")
+	new_window.configure(background = "light blue")
 	new_window.geometry("700x500")
-	text = tk.Label(new_window,text = "New window")
-	text.place(relx=0.5,rely = 0.5)
-	read_data()
+	text = tk.Label(new_window,text = "Egram of the Heart",font = fontStyle5, background = "light blue")
+	egram_stop_bt = tk.Button(new_window, text = "Close",font = fontStyle6, bg = 'red',command = egram_stop)
+
+	fig = Figure()
+	ax1 = fig.add_subplot(2,1,1)
+	ax2 = fig.add_subplot(2,1,2)
+
+	ax1.set_title('Ventricle')
+	ax1.set_ylabel('mVolt')
+	ax1.set_xlim(0, 50)
+	ax1.set_ylim(-5,5) 
+	ax2.set_title('Atriary')
+	ax2.set_xlabel('Time')
+	ax2.set_ylabel('mVolt')
+	ax2.set_xlim(0, 50)
+	ax2.set_ylim(-5,5)
+	ax1.grid()
+	ax2.grid()
+	lines = ax1.plot([], [])[0]
+	lines2 = ax2.plot([], [])[0]
+
+	canvas_egram = FigureCanvasTkAgg(fig, master = new_window)
+	canvas_egram.get_tk_widget().place(x=10, y=60, width= 680, height = 420)
+
+	canvas_egram.draw()
+
+	text.place(relx=0.4,rely = 0.02)
+	egram_stop_bt.place(relx = 0.88, rely = 0.02)
+
+	new_window.after(1, plot_data)
+
+def egram_stop():
+	global new_window
+	new_window.destroy()
+	
 
 
 
