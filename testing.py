@@ -1,10 +1,31 @@
+import serial as sr
 from struct import *
+import parameters as P
+import time
+ser = sr.Serial('COM6', baudrate = 115200, timeout = 1)
+time.sleep(1)
 
-serial_data = pack('>BBBBBHHHHHHHHBHH',0x16,0x22,1,30,125,3000,1000,2,2500,2400,325,120,3,25,6,250)
-print("bigendian   ",serial_data)
+serial_status = 0x16	#22	#0x16
+serial_write = 0x22		#34	#0x22
+#serial_write = 0x62
+#serial_write = 71  #0x47
+serial_data = pack('>BBBddd',serial_status,serial_write,0,0,0,0)
+ser.flush()
 
-serial_data1 = pack('<BBBBBHHHHHHHHBHH',0x16,0x22,1,30,125,3000,1000,2,2500,2400,325,120,3,25,6,250)
-print("smallendian ",serial_data1)
 
-print (list(serial_data))
-print (list(serial_data1))
+print("input data size",calcsize('>BB'))
+print("input data: ", serial_data)
+print("input data: ", list(serial_data))
+
+ser.write(serial_data)
+
+s = ser.read(24)
+
+print("recevied data: ",s)
+print("recevied data: ",list(s))
+print("recevied data size",calcsize('<BBBHHHHHHHHBHH'))
+a = unpack('<BBBHHHHHHHBHHH',s)
+
+ser.close()
+print(a)
+print(a[0])

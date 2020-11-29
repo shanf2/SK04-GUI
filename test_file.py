@@ -67,12 +67,10 @@ serial_write = 0x22		#34	#0x22
 #serial_write = 98 	#0x62
 #serial_write = 71  #0x47
 
-time.sleep(1)
-
 #serial_data = pack('>B',serial_write)
 serial_data = pack('>BBBddd',serial_status,serial_write,0,0,0,0)
 
-print("input data size",calcsize('>BB'))
+print("input data size",calcsize('>BBBddd'))
 print("input data: ", serial_data)
 print("input data: ", list(serial_data))
 
@@ -83,9 +81,9 @@ s = ser.read(24)
 print("recevied data: ",s)
 print("recevied data: ",list(s))
 
-print("recevied data size",calcsize('>BBBHHHHHHHHBHH'))
+print("recevied data size",calcsize('<BBBHHHHHHHHBHH'))
 
-a = unpack('>BBBHHHHHHHBHHH',s)
+a = unpack('<BBBHHHHHHHBHHH',s)
 
 ser.close()
 print(a)

@@ -117,7 +117,7 @@ def read_data():
     data_recevied = ser.read(24) #Read from Serial Port
 
     try:
-    	a = unpack('>BBBHHHHHHHBHHH',data_recevied)
+    	a = unpack('<BBBHHHHHHHBHHH',data_recevied)
     except Exception:
     	pass
 
@@ -431,7 +431,7 @@ def plot_data():
 	ser.close()
 
 	try:
-		a = unpack('>ddd',data_recevied)
+		a = unpack('<ddd',data_recevied)
 	except Exception:
 		a= (0,0,0);
 	if(len(VENT_SIG)<=100):
@@ -468,13 +468,13 @@ def egram():
 
 	ax1.set_title('Ventricle')
 	ax1.set_ylabel('mVolt')
-	ax1.set_xlim(0, 50)
-	ax1.set_ylim(-10,10) 
+	ax1.set_xlim(0, 100)
+	ax1.set_ylim(-5,5) 
 	ax2.set_title('Atriary')
 	ax2.set_xlabel('Time')
 	ax2.set_ylabel('mVolt')
-	ax2.set_xlim(0, 50)
-	ax2.set_ylim(-10,10)
+	ax2.set_xlim(0, 100)
+	ax2.set_ylim(-5,5)
 	ax1.grid()
 	ax2.grid()
 	lines = ax1.plot([], [])[0]
