@@ -8,7 +8,7 @@ time.sleep(1)
 serial_status = 0x16	#22	#0x16
 serial_write = 0x22		#34	#0x22
 #serial_write = 0x62
-#serial_write = 71  #0x47
+serial_write = 0x47
 serial_data = pack('>BBBddd',serial_status,serial_write,0,0,0,0)
 ser.flush()
 

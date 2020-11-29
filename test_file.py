@@ -61,7 +61,7 @@ print("input data: ", list(serial_data))
 
 ser.write(serial_data)
 '''
-ser.reset_input_buffer()
+
 serial_status = 0x16	#22	#0x16
 serial_write = 0x22		#34	#0x22
 #serial_write = 98 	#0x62

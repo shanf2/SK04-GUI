@@ -434,14 +434,14 @@ def plot_data():
 		a = unpack('<ddd',data_recevied)
 	except Exception:
 		a= (0,0,0);
-	if(len(VENT_SIG)<=100):
+	if(len(VENT_SIG)<100):
 		VENT_SIG = np.append(VENT_SIG,float(a[1]))
 		ART_SIG = np.append(ART_SIG,float(a[0]))
 	else:
-		VENT_SIG[0:99]=VENT_SIG[1:100]
-		ART_SIG[0:99] = ART_SIG[1:100]
-		VENT_SIG[100]=float(a[1])
-		ART_SIG[100]	=float(a[0])
+		VENT_SIG[0:98]=VENT_SIG[1:99]
+		ART_SIG[0:98] = ART_SIG[1:99]
+		VENT_SIG[99]=float(a[1])
+		ART_SIG[99]=float(a[0])
 	lines.set_xdata(np.arange(0,len(VENT_SIG)))
 	lines.set_ydata(VENT_SIG)
 	lines2.set_xdata(np.arange(0,len(ART_SIG)))
@@ -450,8 +450,6 @@ def plot_data():
 	canvas_egram.draw()
 
 	new_window.after(1, plot_data)
-
-
 
 def egram():
 	global new_window,lines,lines2,canvas_egram
@@ -470,7 +468,7 @@ def egram():
 	ax1.set_ylabel('mVolt')
 	ax1.set_xlim(0, 100)
 	ax1.set_ylim(-5,5) 
-	ax2.set_title('Atriary')
+	ax2.set_title('Atrium')
 	ax2.set_xlabel('Time')
 	ax2.set_ylabel('mVolt')
 	ax2.set_xlim(0, 100)
@@ -491,7 +489,18 @@ def egram():
 	new_window.after(1, plot_data)
 
 def egram_stop():
-	global new_window
+	global new_window,ser
+	if(ser.isOpen()==False):
+		init_serial()
+
+	ser.open()
+	serial_status = 0x16
+	serial_write = 98
+	serial_data = pack('>BBBddd',serial_status,serial_write,0,0,0,0)
+
+	ser.write(serial_data)
+
+	ser.close()
 	new_window.destroy()
 
 
