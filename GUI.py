@@ -469,12 +469,12 @@ def egram():
 	ax1.set_title('Ventricle')
 	ax1.set_ylabel('mVolt')
 	ax1.set_xlim(0, 50)
-	ax1.set_ylim(-5,5) 
+	ax1.set_ylim(-10,10) 
 	ax2.set_title('Atriary')
 	ax2.set_xlabel('Time')
 	ax2.set_ylabel('mVolt')
 	ax2.set_xlim(0, 50)
-	ax2.set_ylim(-5,5)
+	ax2.set_ylim(-10,10)
 	ax1.grid()
 	ax2.grid()
 	lines = ax1.plot([], [])[0]
@@ -493,8 +493,6 @@ def egram():
 def egram_stop():
 	global new_window
 	new_window.destroy()
-	
-
 
 
 #USED TO SHOW ALL THE PARAMETER !! BEST TO KEEP THIS FUNCTION AT THE END OF ALL FUNCTIONS

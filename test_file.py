@@ -85,7 +85,7 @@ print("recevied data: ",list(s))
 
 print("recevied data size",calcsize('>BBBHHHHHHHHBHH'))
 
-a = unpack('>BBBHHHHHHHHBHH',s)
+a = unpack('>BBBHHHHHHHBHHH',s)
 
 ser.close()
 print(a)
