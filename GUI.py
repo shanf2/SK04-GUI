@@ -28,6 +28,7 @@ root.geometry("1100x600")
 params = P.Parameters()
 nominal = params.save(None)
 
+
 #Variables to hold the value of the current sliders to use for displaying the values.
 lrlvar = StringVar()
 urlvar = StringVar()
@@ -67,7 +68,7 @@ def init_serial():
 		print('No Device Detected')
 
 #Call the Serial Initilization Function, Main Program Starts from here
-def send_data():
+def send_data(params.save(OID[USER_ON])):
     global ser
     if(ser.isOpen()==False):
     	init_serial()
@@ -121,23 +122,30 @@ def read_data():
     except Exception:
     	pass
 
+	egram.func(params.save(None))
+	i=0
+	for k, v in compare.items():
+		if(k != "uid" and k != "msr")
+		compare[k] = a[i]
+		i += 1
+'''
     serial_status = 0x16
     serial_write = 0x22
-    a[0] = mode
-    a[1] = lrl
-    a[2] = url
-    a[3] = a_amp
-    a[4] = v_amp
-    a[5] = pw
-    a[6] = a_sensi
-    a[7] = v_sensi
-    a[8] = rp
-    a[9] = act_thresh
-    a[10] = react_t
-    a[11] = res_fact
-    a[12] = rec_t 
-    a[13] = av_delay
-
+    mode = a[0]
+    lrl = a[1]
+    url = a[2]
+    a_amp = a[3]
+    v_amp = a[4]
+    pw = a[5]
+    a_sensi = a[6]
+    v_sensi = a[7]
+    rp = a[8]
+    av_delay = a[9]
+    act_thresh = a[10]
+    react_t = a[11]
+    res_fact = a[12]
+    rec_t  = a[13]
+'''
     ser.close()
 
 #Background image
