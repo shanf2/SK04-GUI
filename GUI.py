@@ -95,7 +95,7 @@ def send_data():
 						serial_V_Amplitude,serial_Pulsewidth,serial_A_Sensitivity,serial_V_Sensitivity,serial_Refractory,serial_AV_Delay,
 						serial_Activity_Threshold,serial_Reaction_time,serial_Resopnse_factor,serial_Recovery_time,serial_MSR)
 	
-    ser.write(serial_Data)
+    ser.write(serial_data)
 
     ser.close()
 
@@ -362,7 +362,15 @@ def mode_switch(m):
 		if(k != "mode"):
 			varlist[i].set(str(v))
 			i = i+1
-		
+	
+	#Disable all sliders temporarily
+	for p in params.params_used("DDDR"):
+		exec(p+"_scale.configure(state=DISABLED, bg='grey', troughcolor='grey')")
+
+	#Only enable sliders useful in the current mode
+	for p in params.params_used(params.get_mode()):
+		exec(p+"_scale.configure(state=NORMAL, bg='#80aaff', troughcolor='white')")
+
 	db.save_mode(Data, params.mode, OID[USER_ON])
 	Data.close()	
 		
@@ -433,7 +441,7 @@ def plot_data():
 	try:
 		a = unpack('<ddd',data_recevied)
 	except Exception:
-		a= (0,0,0);
+		a= (0,0,0)
 	if(len(VENT_SIG)<100):
 		VENT_SIG = np.append(VENT_SIG,float(a[1]))
 		ART_SIG = np.append(ART_SIG,float(a[0]))
