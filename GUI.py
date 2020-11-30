@@ -489,9 +489,9 @@ def egram():
 	new_window.geometry("700x500")
 	text = tk.Label(new_window,text = "Egram of the Heart",font = fontStyle5, background = "light blue")
 	egram_stop_bt = tk.Button(new_window, text = "Close",font = fontStyle6, bg = 'red',command = egram_stop)
-	egram_ven = tk.Button(new_window, text = "Atrium Only",font = fontStyle3, bg = 'red',command = egram_vent)
-	egram_ar = tk.Button(new_window, text = "Atrium Only",font = fontStyle3, bg = 'red',command = egram_art)
-	egram_both = tk.Button(new_window, text = "Both",font = fontStyle3, bg = 'red',command = egram_bot)
+	egram_ven = tk.Button(new_window, text = "Atrium Only",font = fontStyle7, bg = 'light blue',command = egram_vent)
+	egram_ar = tk.Button(new_window, text = "Atrium Only",font = fontStyle7, bg = 'light blue',command = egram_art)
+	egram_both = tk.Button(new_window, text = "Both",font = fontStyle7, bg = 'light blue',command = egram_bot)
 
 	fig = Figure()
 	ax1 = fig.add_subplot(2,1,1)
@@ -518,9 +518,9 @@ def egram():
 
 	text.place(relx=0.4,rely = 0.02)
 	egram_stop_bt.place(relx = 0.88, rely = 0.02)
-	egram_ar.place(rely = 0.02, relx = 0.3)
-	egram_ven.place(rely = 0.02, relx = 0.2)
-	egram_both.place(rely = 0.02, relx = 0.1)
+	egram_ar.place(rely = 0.02, relx = 0.2)
+	egram_ven.place(rely = 0.02, relx = 0.08)
+	egram_both.place(rely = 0.02, relx = 0.02)
 
 	new_window.after(1, plot_data)
 
