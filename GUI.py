@@ -446,7 +446,7 @@ def plot_data():
 	ser.close()
 
 	try:
-		a = unpack('<HHHHHHHHd',data_recevied)
+		a = unpack('<ddd',data_recevied)
 	except Exception:
 		a= (0,0,0)
 	if(len(VENT_SIG)<100):
@@ -466,6 +466,21 @@ def plot_data():
 
 	new_window.after(1, plot_data)
 
+def egram_art():
+	global lines,lines2
+	lines.set_alpha(0.1)
+	lines2.set_alpha(1.0)
+
+def egram_vent():
+	global lines,lines2
+	lines2.set_alpha(0.1)
+	lines.set_alpha(1.0)
+
+def egram_bot():
+	global lines,lines2
+	lines.set_alpha(1.0)
+	lines2.set_alpha(1.0)
+
 def egram():
 	global new_window,lines,lines2,canvas_egram
 	new_window = tk.Toplevel(root)
@@ -474,6 +489,9 @@ def egram():
 	new_window.geometry("700x500")
 	text = tk.Label(new_window,text = "Egram of the Heart",font = fontStyle5, background = "light blue")
 	egram_stop_bt = tk.Button(new_window, text = "Close",font = fontStyle6, bg = 'red',command = egram_stop)
+	egram_ven = tk.Button(new_window, text = "Atrium Only",font = fontStyle3, bg = 'red',command = egram_vent)
+	egram_ar = tk.Button(new_window, text = "Atrium Only",font = fontStyle3, bg = 'red',command = egram_art)
+	egram_both = tk.Button(new_window, text = "Both",font = fontStyle3, bg = 'red',command = egram_bot)
 
 	fig = Figure()
 	ax1 = fig.add_subplot(2,1,1)
@@ -500,6 +518,9 @@ def egram():
 
 	text.place(relx=0.4,rely = 0.02)
 	egram_stop_bt.place(relx = 0.88, rely = 0.02)
+	egram_ar.place(rely = 0.02, relx = 0.3)
+	egram_ven.place(rely = 0.02, relx = 0.2)
+	egram_both.place(rely = 0.02, relx = 0.1)
 
 	new_window.after(1, plot_data)
 
