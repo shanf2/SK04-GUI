@@ -88,4 +88,3 @@ print("recevied data size",calcsize('<BBBHHHHHHHHBHH'))
 
 ser.close()
 #print(a)
-#print(a[0])

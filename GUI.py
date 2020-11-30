@@ -450,8 +450,8 @@ def plot_data():
 	except Exception:
 		a= (0,0,0)
 	if(len(VENT_SIG)<100):
-		VENT_SIG = np.append(VENT_SIG,float(a[0:3]))
-		ART_SIG = np.append(ART_SIG,float(a[4:7]))
+		VENT_SIG = np.append(VENT_SIG,float(a[1]))
+		ART_SIG = np.append(ART_SIG,float(a[0]))
 	else:
 		VENT_SIG[0:98]=VENT_SIG[1:99]
 		ART_SIG[0:98] = ART_SIG[1:99]
