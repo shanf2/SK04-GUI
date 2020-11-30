@@ -27,7 +27,7 @@ root.geometry("1100x600")
 
 params = P.Parameters()
 nominal = params.save(None)
-
+ser =sr.Serial()
 
 #Variables to hold the value of the current sliders to use for displaying the values.
 lrlvar = StringVar()
@@ -47,7 +47,6 @@ msrvar = StringVar()
 varlist=[ lrlvar, urlvar, aampvar, vampvar, pwvar, asensivar, vsensivar, rpvar\
 	    , avdelayvar, actthreshvar, reacttvar, resfactvar, rectvar, msrvar ]
 
-ser =sr
 #Initialize the serial communication
 def init_serial():
 	global ser
@@ -68,7 +67,7 @@ def init_serial():
 		print('No Device Detected')
 
 #Call the Serial Initilization Function, Main Program Starts from here
-def send_data(params.save(OID[USER_ON])):
+def send_data():
     global ser
     if(ser.isOpen()==False):
     	init_serial()
@@ -102,7 +101,7 @@ def send_data(params.save(OID[USER_ON])):
 
 
 def read_data():
-    global ser, mode, lrl, url, a_amp, v_amp, pw, a_sensi, v_sensi, rp, act_thresh, react_t, res_fact, rec_t , av_delay
+    global ser, compare
 
     if(ser.isOpen()==False):
     	init_serial()
@@ -120,14 +119,14 @@ def read_data():
     try:
     	a = unpack('<BBBHHHHHHHBHHH',data_recevied)
     except Exception:
-    	pass
+    	a = unpack('<BBBHHHHHHHBHHH',0,0,0,0,0,0,0,0,0,0,0,0,0,0)
 
-	egram.func(params.save(None))
-	i=0
-	for k, v in compare.items():
-		if(k != "uid" and k != "msr")
-		compare[k] = a[i]
-		i += 1
+    i=0
+    for k, v in compare.items():
+    	if(k != "uid" and k != "msr"):
+    		compare[k] = a[i]
+    		i += 1
+    ser.close()
 '''
     serial_status = 0x16
     serial_write = 0x22
@@ -146,7 +145,7 @@ def read_data():
     res_fact = a[12]
     rec_t  = a[13]
 '''
-    ser.close()
+    
 
 #Background image
 class Background(Frame):
@@ -447,12 +446,12 @@ def plot_data():
 	ser.close()
 
 	try:
-		a = unpack('<ddd',data_recevied)
+		a = unpack('<HHHHHHHHd',data_recevied)
 	except Exception:
 		a= (0,0,0)
 	if(len(VENT_SIG)<100):
-		VENT_SIG = np.append(VENT_SIG,float(a[1]))
-		ART_SIG = np.append(ART_SIG,float(a[0]))
+		VENT_SIG = np.append(VENT_SIG,float(a[0:3]))
+		ART_SIG = np.append(ART_SIG,float(a[4:7]))
 	else:
 		VENT_SIG[0:98]=VENT_SIG[1:99]
 		ART_SIG[0:98] = ART_SIG[1:99]
