@@ -67,7 +67,7 @@ serial_write = 0x22		#34	#0x22
 #serial_write = 71  #0x47
 
 #serial_data = pack('>B',serial_write)
-serial_data = pack('>BBBddd',serial_status,serial_write,0,0,0,0)
+serial_data = pack('<BBBddd',serial_status,serial_write,0,0,0,0)
 
 print("input data size",calcsize('>BBBdddB'))
 print("input data: ", serial_data)
